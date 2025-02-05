@@ -1,5 +1,5 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, CallbackContext  # type: ignore
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardButton
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext  # type: ignore
 
 # Словарь с числами и их возможными следующими числами
 numbers_dict = {
@@ -43,47 +43,33 @@ numbers_dict = {
     "00": ["19", "29", "32", "27", "8", "35"]
 }
 
-# Обработчик команды /start
-
-
-async def start(update: Update, context: CallbackContext):
-    # Создаем клавиатуру с числами
+# Функция для создания клавиатуры
+def create_keyboard():
     keyboard = [
-        [InlineKeyboardButton("0", callback_data="0")],
-        [InlineKeyboardButton("00", callback_data="00")],
-        *[[InlineKeyboardButton(str(i), callback_data=str(i)) for i in range(1 + j * 6, 7 + j * 6)] for j in range(6)]
+        ["0", "00"],
+        *[[str(i) for i in range(1 + j * 6, 7 + j * 6)] for j in range(6)]
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-    # Отправляем сообщение с клавиатурой
-    await update.message.reply_text("Выберите число:", reply_markup=reply_markup)
+# Обработчик команды /start
+async def start(update: Update, context: CallbackContext):
+    await update.message.reply_text("Выберите число:", reply_markup=create_keyboard())
 
-# Обработчик нажатия на кнопку
-
-
-async def button_click(update: Update, context: CallbackContext):
-    query = update.callback_query
-    user_choice = query.data
+# Обработчик текстовых сообщений
+async def handle_message(update: Update, context: CallbackContext):
+    user_choice = update.message.text
 
     # Проверяем, есть ли выбранное число в словаре
     if user_choice in numbers_dict:
         next_numbers = numbers_dict[user_choice]
-        await query.edit_message_text(f"Следующие числа: {', '.join(next_numbers)}")
+        await update.message.reply_text(f"Следующие числа: {', '.join(next_numbers)}")
     else:
-        await query.edit_message_text("Ошибка: число не найдено.")
+        await update.message.reply_text("Ошибка: число не найдено.")
 
-    # Снова показываем клавиатуру для выбора следующего числа
-    keyboard = [
-        [InlineKeyboardButton("0", callback_data="0")],
-        [InlineKeyboardButton("00", callback_data="00")],
-        *[[InlineKeyboardButton(str(i), callback_data=str(i)) for i in range(1 + j * 6, 7 + j * 6)] for j in range(6)]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.message.reply_text("Выберите число:", reply_markup=reply_markup)
+    # Снова показываем клавиатуру
+    await update.message.reply_text("Выберите число:", reply_markup=create_keyboard())
 
 # Основная функция для запуска бота
-
-
 def main():
     # Укажите ваш токен
     token = "7877763853:AAH6Pr5Dtkr2GJ2fNwQbu5lEVYLQdCbjGhA"
@@ -94,12 +80,11 @@ def main():
     # Обработчик команды /start
     application.add_handler(CommandHandler("start", start))
 
-    # Обработчик нажатия на кнопку
-    application.add_handler(CallbackQueryHandler(button_click))
+    # Обработчик текстовых сообщений
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # Запускаем бота
     application.run_polling()
-
 
 if __name__ == "__main__":
     main()
