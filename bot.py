@@ -72,7 +72,7 @@ async def handle_message(update: Update, context: CallbackContext):
 # Основная функция для запуска бота
 def main():
     # Укажите ваш токен
-    token = "7877763853:AAH6Pr5Dtkr2GJ2fNwQbu5lEVYLQdCbjGhA"
+    token = BOT_TOKEN
 
     # Создаем приложение и добавляем обработчики
     application = Application.builder().token(token).build()
