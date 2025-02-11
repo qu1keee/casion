@@ -1,8 +1,10 @@
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext  # type: ignore
+import asyncio
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-# Словарь с числами и их возможными следующими числами
-numbers_dict = {
+TOKEN = "7877763853:AAH6Pr5Dtkr2GJ2fNwQbu5lEVYLQdCbjGhA"
+
+data = {
     "0": ["18", "23", "00", "5", "24", "13"],
     "1": ["13", "2", "00", "28", "21", "27"],
     "2": ["28", "35", "14", "27", "23", "3"],
@@ -43,48 +45,33 @@ numbers_dict = {
     "00": ["19", "29", "32", "27", "8", "35"]
 }
 
-# Функция для создания клавиатуры
-def create_keyboard():
-    keyboard = [
-        ["0", "00"],
-        *[[str(i) for i in range(1 + j * 6, 7 + j * 6)] for j in range(6)]
-    ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
 
-# Обработчик команды /start
-async def start(update: Update, context: CallbackContext):
-    await update.message.reply_text("Выберите число:", reply_markup=create_keyboard())
+def generate_keyboard():
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=str(i)) for i in range(j, j+6) if i <= 36] 
+            for j in range(0, 37, 6)
+        ] + [[KeyboardButton(text="00")]],
+        resize_keyboard=True
+    )
+    return keyboard
 
-# Обработчик текстовых сообщений
-async def handle_message(update: Update, context: CallbackContext):
-    user_choice = update.message.text
 
-    # Проверяем, есть ли выбранное число в словаре
-    if user_choice in numbers_dict:
-        next_numbers = numbers_dict[user_choice]
-        await update.message.reply_text(f"Следующие числа: {', '.join(next_numbers)}")
-    else:
-        await update.message.reply_text("Ошибка: число не найдено.")
+@dp.message(lambda message: message.text in data)
+async def send_numbers(message: types.Message):
+    chosen_number = message.text
+    response_numbers = ", ".join(data[chosen_number])
+    await message.answer(f"Ваши числа: {response_numbers}", reply_markup=generate_keyboard())
 
-    # Снова показываем клавиатуру
-    await update.message.reply_text("Выберите число:", reply_markup=create_keyboard())
+@dp.message()
+async def unknown_message(message: types.Message):
+    await message.answer("Выберите число с клавиатуры", reply_markup=generate_keyboard())
 
-# Основная функция для запуска бота
-def main():
-    # Укажите ваш токен
-    token = "7877763853:AAH6Pr5Dtkr2GJ2fNwQbu5lEVYLQdCbjGhA"
+async def main():
+    await dp.start_polling(bot)
 
-    # Создаем приложение и добавляем обработчики
-    application = Application.builder().token(token).build()
-
-    # Обработчик команды /start
-    application.add_handler(CommandHandler("start", start))
-
-    # Обработчик текстовых сообщений
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # Запускаем бота
-    application.run_polling()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
